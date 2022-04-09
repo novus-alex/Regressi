@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from random import gauss
 
-def Regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
+def regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
     '''
     Fonction pour faire des regressions linéaires avec propagation des incertitudes
     '''
@@ -74,7 +74,7 @@ def Regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
 
     for i in range(len(X)):
         ellipse(X[i], DX[i], Y[i], DY[i])
-    axs[0][0].scatter(X, Y, label='Measures')
+    axs[0][0].scatter(X, Y, c='k', s=10)
 
     for i in range(iterations):
         Xalea = [gauss(X[_], DX[_]) for _ in range(len(X))]
@@ -82,7 +82,7 @@ def Regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
         a, b = np.polyfit(Xalea, Yalea, 1)
         Aalea.append(a); Balea.append(b)
 
-        axs[0][1].plot(x, [a*_ + b for _ in x])
+        axs[0][1].plot(x, [a*_ + b for _ in x], lw=1)
 
     M, m = [], []
     for i in x:
@@ -96,7 +96,7 @@ def Regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
     moy_a, et_a = get_r(Aalea)
     moy_b, et_b = get_r(Balea)
 
-    axs[0][0].plot(x, [moy_a*_ + moy_b for _ in x], 'r', label=f'y={round(moy_a, 2)}x + {round(moy_b, 2)}')
+    axs[0][0].plot(x, [moy_a*_ + moy_b for _ in x], 'r', lw=1)
     axs[1][1].plot(X, DX); axs[1][1].plot(Y, DY)
 
     '''
@@ -112,13 +112,15 @@ def Regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
     '''
     
     axs[0][0].set_title('Regression')
-    axs[0][0].legend()
+    axs[0][0].text(X[0], Y[-1], f'y={round(moy_a, 2)}x+{round(moy_b, 2)}\nΔa={round(et_a,1)}\nΔb={round(et_b,1)}',
+        horizontalalignment='left', verticalalignment='top')
     axs[0][1].set_title('Enveloppe')
     axs[1][0].set_title('Histogramme a/b')
     axs[1][0].legend(['a', 'b'])
     axs[1][1].set_title('Incertitudes')
     axs[1][1].legend(['DX=f(X)', 'DY=f(Y)'])
+    fig.canvas.manager.set_window_title('Regressi')
     plt.show()
 
 
-Regressi([1, 2, 3], [1, 2, 3], [0.001, 0.002, 0.001], [0.1, 0.2, 0.1], 'y=ax+b')
+regressi([50E-3, 70E-3, 100E-3], [4/10, 4.5/10, 5.2/10], [1E-4, 1E-4, 1E-4], [0.03, 0.03, 0.03], 'y=asqrt(x)+b', 1000)
