@@ -23,18 +23,37 @@ def Regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
             'y=ax+b': lambda X: X,
             'y=asqrt(x)+b': lambda X: [sqrt(_) for _ in X],
             'y=a/x+b': lambda X: [1/_ for _ in X],
-            'y=aln(x)+b': lambda X: [log(_) for _ in X]
+            'y=aln(x)+b': lambda X: [log(_) for _ in X],
         }
 
         incert_types = {
-            'y=ax+b': lambda X: X,
+            'y=ax+b': lambda X: DL,
             'y=asqrt(x)+b': lambda X: [X[i]*DL[i]/2*L[i] for i in range(len(X))],
             'y=a/x+b': lambda X: [X[i]*DL[i]/L[i] for i in range(len(X))],
             'y=aln(x)+b': lambda X: [log(_) for _ in X]
         }
 
+        degrees = {
+            '1/2': lambda X: [sqrt(_) for _ in X]
+        }
+
+        incert_degrees = {
+            '1/2': lambda X: [X[i]*DL[i]/2*L[i] for i in range(len(X))]
+        }
+
         if format in types:
-            return types.get(format) if incert == False else incert_types.get(format)
+            return types.get(format) if not incert else incert_types.get(format)
+        elif '**' in format:
+            new_format = format.split('**')
+            new_format = new_format[-1].split('+')
+            degree = new_format[0]
+            try:
+                return lambda X: [_**int(degree) for _ in X] if not incert else [int(degree)*X[i]*DL[i]/L[i] for i in range(len(X))]
+            except TypeError:
+                if degree in degrees:
+                    return degrees.get(degree) if not incert else incert_degrees.get(degree)
+                else:
+                    raise BadRegressionType(f'{format} is not a valid format')
         else:
             raise BadRegressionType(f'{format} is not a valid format')
 
@@ -49,13 +68,13 @@ def Regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
         axs[0][0].plot(xe, ye, 'k', lw=1)
 
     X, Y = LookForType(format)(L), M
-    DX, DY = LookForType(format, True)(DL), DM
+    DX, DY = LookForType(format, True)(X), DM
     Aalea, Balea = [], []
     x = np.linspace(X[0], X[-1], 100)
 
     for i in range(len(X)):
         ellipse(X[i], DX[i], Y[i], DY[i])
-    axs[0][0].scatter(X, Y)
+    axs[0][0].scatter(X, Y, label='Measures')
 
     for i in range(iterations):
         Xalea = [gauss(X[_], DX[_]) for _ in range(len(X))]
@@ -101,4 +120,5 @@ def Regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
     axs[1][1].legend(['DX=f(X)', 'DY=f(Y)'])
     plt.show()
 
-Regressi([1, 2, 3], [1, 2, 3], [0.01, 0.02, 0.01], [0.1, 0.2, 0.1], 'y=ax+b')
+
+Regressi([1, 2, 3], [1, 2, 3], [0.001, 0.002, 0.001], [0.1, 0.2, 0.1], 'y=ax+b')
