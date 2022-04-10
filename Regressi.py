@@ -1,9 +1,46 @@
+__help__ = '''
+Simple linear regression package,
+
+@format:
+
+    default:
+     - y=ax+b
+
+    all:
+     - y=ax+b
+     - y=a/x+b
+     - y=asqrt(x)+b
+     - y=ax**n+b # n is an integer
+
+
+@params:
+    
+    - L: list (required)
+    - M: list (required)
+    - DL: list (required)
+    - DM: list (required)
+    - format: str (optional)
+    - iterations: int (optional)
+    - graph: bool (optional)
+
+
+@output:
+
+    LinearRegResult type:
+     - result[key] -> float
+     - result.infof(other_result, x) -> bool
+     - result.overof(other_result, x) -> bool
+'''
+
+'''
+Needed libraries, please make sure that you installed all of them
+'''
 from math import *
 import numpy as np
 import matplotlib.pyplot as plt
 from random import gauss
 
-def regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
+def regressi(L: list, M: list, DL: list, DM: list, format='y=ax+b', iterations=1000, graph=True):
     '''
     Fonction pour faire des regressions linéaires avec propagation des incertitudes
     '''
@@ -53,9 +90,9 @@ def regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
                 if degree in degrees:
                     return degrees.get(degree) if not incert else incert_degrees.get(degree)
                 else:
-                    raise BadRegressionType(f'{format} is not a valid format')
+                    raise Error.BadRegressionType(f'{format} is not a valid format')
         else:
-            raise BadRegressionType(f'{format} is not a valid format')
+            raise Error.BadRegressionType(f'{format} is not a valid format')
 
     def ellipse(xc, a, yc, b):
         '''
@@ -74,7 +111,6 @@ def regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
 
     for i in range(len(X)):
         ellipse(X[i], DX[i], Y[i], DY[i])
-    axs[0][0].scatter(X, Y, c='k', s=10)
 
     for i in range(iterations):
         Xalea = [gauss(X[_], DX[_]) for _ in range(len(X))]
@@ -89,16 +125,70 @@ def regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
         M.append(max([Aalea[_]*i + Balea[_] for _ in range(len(Aalea))]))
         m.append(min([Aalea[_]*i + Balea[_] for _ in range(len(Aalea))]))
 
-    axs[0][1].plot(x, M, 'k--'); axs[0][1].plot(x, m, 'k--')
-    axs[1][0].hist(Aalea); axs[1][0].hist(Balea)
-
     get_r = lambda X: (np.mean(X),np.std(X))
     moy_a, et_a = get_r(Aalea)
     moy_b, et_b = get_r(Balea)
 
-    axs[0][0].plot(x, [moy_a*_ + moy_b for _ in x], 'r', lw=1)
-    axs[1][1].plot(X, DX); axs[1][1].plot(Y, DY)
 
+    '''
+    Légendes
+    '''
+    
+    if graph:
+        axs[0][1].plot(x, M, 'k--'); axs[0][1].plot(x, m, 'k--')
+        axs[1][0].hist(Aalea); axs[1][0].hist(Balea)
+        axs[0][0].plot(x, [moy_a*_ + moy_b for _ in x], 'r', lw=1)
+        axs[1][1].plot(X, DX); axs[1][1].plot(Y, DY)
+        axs[0][0].scatter(X, Y, c='k', s=10)
+
+        axs[0][0].set_title('Regression')
+        axs[0][0].text(X[0], Y[-1], f'y={round(moy_a, 2)}x+{round(moy_b, 2)}\nΔa={round(et_a,1)}\nΔb={round(et_b,1)}',
+            horizontalalignment='left', verticalalignment='top')
+        axs[0][1].set_title('Enveloppe')
+        axs[1][0].set_title('Histogramme a/b')
+        axs[1][0].legend(['a', 'b'])
+        axs[1][1].set_title('Incertitudes')
+        axs[1][1].legend(['DX=f(X)', 'DY=f(Y)'])
+        fig.canvas.manager.set_window_title('Regressi')
+        
+        plt.show()
+
+    return LinearRegResult(moy_a, moy_b, et_a, et_b)
+
+
+class LinearRegResult:
+    '''
+    Objet python qui contient le résultat de la regression linéaire
+    '''
+
+    def __init__(self, a, b, da, db):
+        self.values = {
+            0: a,
+            1: b,
+            2: da,
+            3: db
+        }
+
+    def __str__(self):
+        return f"a={round(self.values.get(0), 2)}±{round(self.values.get(2), 1)}, b={round(self.values.get(1), 2)}±{round(self.values.get(3), 1)}"
+
+    def __getitem__(self, key: int):
+        return self.values.get(key)
+
+    def infof(self, v, x):
+        if type(v) == type(LinearRegResult):
+            return True if x*(self.values.get(0)-v.values.get(0)) <= v.values.get(1)-self.values.get(1) else False
+        else:
+            raise BadType(f'{v} is not a valid {type(LinearRegResult)}')
+
+    def overof(self, v, x):
+        if type(v) == type(LinearRegResult):
+            return True if x*(self.values.get(0)-v.values.get(0)) >= v.values.get(1)-self.values.get(1) else False
+        else:
+            raise BadType(f'{v} is not a valid {type(LinearRegResult)}')
+
+
+class Error:
     '''
     Exceptions
     '''
@@ -106,21 +196,9 @@ def regressi(L, M, DL, DM, format='y=ax+b', iterations=1000):
     class BadRegressionType(Exception):
         pass
 
-
-    '''
-    Legends
-    '''
-    
-    axs[0][0].set_title('Regression')
-    axs[0][0].text(X[0], Y[-1], f'y={round(moy_a, 2)}x+{round(moy_b, 2)}\nΔa={round(et_a,1)}\nΔb={round(et_b,1)}',
-        horizontalalignment='left', verticalalignment='top')
-    axs[0][1].set_title('Enveloppe')
-    axs[1][0].set_title('Histogramme a/b')
-    axs[1][0].legend(['a', 'b'])
-    axs[1][1].set_title('Incertitudes')
-    axs[1][1].legend(['DX=f(X)', 'DY=f(Y)'])
-    fig.canvas.manager.set_window_title('Regressi')
-    plt.show()
+    class BadType(Exception):
+        pass
 
 
-regressi([50E-3, 70E-3, 100E-3], [4/10, 4.5/10, 5.2/10], [1E-4, 1E-4, 1E-4], [0.03, 0.03, 0.03], 'y=asqrt(x)+b', 1000)
+#r = regressi([50E-3, 70E-3, 100E-3], [4/10, 4.5/10, 5.2/10], [1E-4, 1E-4, 1E-4], [0.03, 0.03, 0.03], 'y=ax+b', 1000, True)
+print(__help__)
